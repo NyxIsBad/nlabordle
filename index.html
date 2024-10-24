@@ -2,7 +2,7 @@
     main { 
         width: 512px;
         margin: auto;
-        padding-top: 64px;
+        display: none;
     }
     #guesses { 
         margin-top: 8px;
@@ -37,7 +37,8 @@
     .amber {
         background: hsl(45, 90%, 55%); }
     .orange {
-        background: hsl(25, 90%, 50%); }
+        background: hsl(25, 90%, 50%);
+        color: white; }
     .red {
         background: hsl(0, 90%, 50%);
         color: white; }
@@ -52,6 +53,9 @@
         text-align: center;
         margin: 0;
     }
+    h1 {
+        margin-top: 64px;
+    }
     #today { margin-bottom: 16px; }
 
     .invalid {
@@ -61,11 +65,12 @@
 
 <meta charset="utf8">
 
-<main>
-    <h1>
-        nlabordle
-    </h1>
-    <div id="today"></div>
+<h1>
+    nlabordle
+</h1>
+<div id="today"></div>
+
+<main id="main">
     <div id="form">
         <input placeholder="Guess" id="input" onkeydown="if (event.keyCode == 13) guess()">
         <button onclick="guess()">Guess</button>    
@@ -130,6 +135,7 @@
 
     async function main() {
         data = JSON.parse(new TextDecoder().decode(pako.inflate(await (await fetch("data.bin")).arrayBuffer())));
+        document.getElementById("main").style.display = "block";
     }
     main();
 
