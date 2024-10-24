@@ -5,12 +5,14 @@
         padding-top: 64px;
     }
     #guesses { 
-        margin-top: 4px;
+        margin-top: 8px;
     }
     .guess {
         display: flex;
         flex-direction: row;
-        padding: 4px 16px;
+        padding: 0 8px;
+        padding-right: 0;
+        margin: 8px 0;
         align-items: center;
     }
     .guess :first-child {
@@ -31,11 +33,11 @@
     .lime {
         background: hsl(80, 90%, 60%); }
     .yellow {
-        background: hsl(50, 90%, 60%); }
+        background: hsl(60, 90%, 60%); }
     .amber {
-        background: hsl(40, 90%, 60%); }
+        background: hsl(45, 90%, 55%); }
     .orange {
-        background: hsl(25, 90%, 60%); }
+        background: hsl(25, 90%, 50%); }
     .red {
         background: hsl(0, 90%, 50%);
         color: white; }
@@ -65,7 +67,7 @@
     </h1>
     <div id="today"></div>
     <div id="form">
-        <input placeholder="Guess" id="input">
+        <input placeholder="Guess" id="input" onkeydown="if (event.keyCode == 13) guess()">
         <button onclick="guess()">Guess</button>    
     </div>
     <div id="guesses">
@@ -116,6 +118,9 @@
                 }
 
                 distances[link] = distances[article] + 1;
+                if (link == target) {
+                    break;
+                }
                 queue.push(link);
             }
         }
@@ -140,13 +145,13 @@
     const guessesElem = document.getElementById("guesses");
 
     const targets = {
-        "2024-10-23": "abstract general, concrete general and concrete particular",
-        "2024-10-24": "object",
-        "2024-10-25": "ring",
-        "2024-10-26": "differential form",
-        "2024-10-27": "manifold",
-        "2024-10-28": "rational number",
-        "2024-10-29": "circle",
+        "2024-10-24": "set",
+        "2024-10-25": "object",
+        "2024-10-26": "ring",
+        "2024-10-27": "differential form",
+        "2024-10-28": "manifold",
+        "2024-10-29": "rational number",
+        "2024-10-30": "circle",
 //        "2024-10-27": "The Rising Sea",
 //        "2024-10-28": "decategorification"
     }
@@ -188,18 +193,15 @@
             occurs.innerText = occurences;
 
             function numberToColor(num) {
-                return {
-                    0: "blue",
-                    1: "green",
-                    2: "lime",
-                    3: "yellow",
-                    4: "amber",
-                    5: "amber",
-                    6: "orange",
-                    7: "orange",
-                }[num] || "red";
+                return num == 0 ? "blue" : 
+                    num <= 1 ? "green" : 
+                    num <= 1.5 ? "lime" :
+                    num <= 2 ? "yellow" : 
+                    num <= 3 ? "amber" : 
+                    num <= 4 ? "orange" : "red";
             }
-            distance.classList.add(numberToColor(Math.floor(avgDist)));
+
+            distance.classList.add(numberToColor(avgDist));
             occurs.classList.add(
                 resolveLink(target) == guessLink ? "blue" : 
                 occurences >= 10 ? "green" : 
@@ -207,6 +209,9 @@
                 occurences >= 4 ? "yellow" : 
                 occurences >= 2 ? "amber" :
                 occurences >= 1 ? "orange" : "red");
+            if (resolveLink(target) == guessLink) {
+                guess.classList.add("blue");
+            }
         }, 50);
     }
 </script>
