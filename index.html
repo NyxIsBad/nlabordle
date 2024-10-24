@@ -1,0 +1,212 @@
+<style> 
+    main { 
+        width: 512px;
+        margin: auto;
+        padding-top: 64px;
+    }
+    #guesses { 
+        margin-top: 4px;
+    }
+    .guess {
+        display: flex;
+        flex-direction: row;
+        padding: 4px 16px;
+        align-items: center;
+    }
+    .guess :first-child {
+        flex-grow: 1;
+    }
+    .guess :not(:first-child) {
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        text-align: center;
+        margin: 0 4px;
+    }
+
+    .blue {
+        background: hsl(200, 90%, 60%); }
+    .green {
+        background: hsl(130, 90%, 60%); }
+    .lime {
+        background: hsl(80, 90%, 60%); }
+    .yellow {
+        background: hsl(50, 90%, 60%); }
+    .amber {
+        background: hsl(40, 90%, 60%); }
+    .orange {
+        background: hsl(25, 90%, 60%); }
+    .red {
+        background: hsl(0, 90%, 50%);
+        color: white; }
+
+    #form { 
+        display: flex;
+        flex-direction: row;
+    }
+    #form input { flex-grow: 1; padding: 4px 8px; border: 2px solid black; }
+    #form button { width: 72px; padding: 4px 8px; margin-left: 8px; }
+    h1, #today {
+        text-align: center;
+        margin: 0;
+    }
+    #today { margin-bottom: 16px; }
+
+    .invalid {
+        border-color: red  !important;
+    }
+</style>
+
+<meta charset="utf8">
+
+<main>
+    <h1>
+        nlabordle
+    </h1>
+    <div id="today"></div>
+    <div id="form">
+        <input placeholder="Guess" id="input">
+        <button onclick="guess()">Guess</button>    
+    </div>
+    <div id="guesses">
+
+    </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" integrity="sha512-g2TeAWw5GPnX7z0Kn8nFbYfeHcvAu/tx6d6mrLe/90mkCxO+RcptyYpksUz35EO337F83bZwcmUyHiHamspkfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+    let data;
+
+    function resolveLink(link) {
+        if (data[link] == undefined) {
+//            console.warn("unknown article when resolving: " + link);
+            return link;
+        }
+        if (data[link].redirect &&data[link].redirect != link) {
+            return resolveLink(data[link].redirect);
+        }
+        return link;
+    }
+
+    function computeDistance(from, target) {
+        from = resolveLink(from);
+        target = resolveLink(target);
+
+        if (from == target) { return 0; }
+
+        let distances = {};
+        distances[from] = 0;
+
+        let queue = [from];
+        for (;;) {
+            let article = queue.shift();
+            if (!article) {
+                break;
+            }
+
+            if (!(data[article] && data[article].links)) {
+//                console.warn("unknown article when computing: " + article);
+                continue;
+            }
+
+            let links = data[article].links.map(link => resolveLink(link));
+            for (let link of links) {
+                if (link in distances) {
+                    continue;
+                }
+
+                distances[link] = distances[article] + 1;
+                queue.push(link);
+            }
+        }
+
+        return distances[target];
+    }
+
+    async function main() {
+        data = JSON.parse(new TextDecoder().decode(pako.inflate(await (await fetch("data.bin")).arrayBuffer())));
+    }
+    main();
+
+    // GUI
+    const date = new Date();
+    const today = date.getFullYear() +  "-" + (date.getMonth() + 1) + "-" + date.getDate();
+    document.getElementById("today").textContent = today;
+
+    const inputElem  = document.getElementById("input");
+    inputElem.oninput = function() { 
+        inputElem.className = "";
+    };
+    const guessesElem = document.getElementById("guesses");
+
+    const targets = {
+        "2024-10-23": "abstract general, concrete general and concrete particular",
+        "2024-10-24": "object",
+        "2024-10-25": "ring",
+        "2024-10-26": "differential form",
+        "2024-10-27": "manifold",
+        "2024-10-28": "rational number",
+        "2024-10-29": "circle",
+//        "2024-10-27": "The Rising Sea",
+//        "2024-10-28": "decategorification"
+    }
+    
+    let previousGuesses = new Set();
+    function guess() {
+        let guessLink = resolveLink(inputElem.value);
+        if (!(guessLink in data) || previousGuesses.has(guessLink)) {
+            inputElem.classList.add("invalid");
+            return;
+        }
+        inputElem.className = "";
+        previousGuesses.add(guessLink);
+
+        let guess = document.createElement("div");
+        let article = document.createElement("div");
+        article.innerText = guessLink;
+        let distance = document.createElement("div");
+        let occurs = document.createElement("div");
+        guess.className = "guess";
+        guess.appendChild(article);
+        guess.appendChild(distance);
+        guess.appendChild(occurs);
+
+        guessesElem.appendChild(guess);
+
+        setTimeout(() => {
+            const target = targets[today] || "Sandbox";
+
+            let dists = [];
+            let dist = computeDistance(guessLink, target);
+            if (dist !== undefined) dists.push(dist);
+            let revDist = computeDistance(target, guessLink);
+            if (revDist !== undefined) dists.push(revDist);
+            let avgDist = dists.length == 0 ? "∞" : dists.reduce((a, b) => a + b, 0) / dists.length;
+
+            distance.innerText = avgDist;
+            let occurences = data[target].content.split(guessLink).length - 1;
+            occurs.innerText = occurences;
+
+            function numberToColor(num) {
+                return {
+                    0: "blue",
+                    1: "green",
+                    2: "lime",
+                    3: "yellow",
+                    4: "amber",
+                    5: "amber",
+                    6: "orange",
+                    7: "orange",
+                }[num] || "red";
+            }
+            distance.classList.add(numberToColor(Math.floor(avgDist)));
+            occurs.classList.add(
+                resolveLink(target) == guessLink ? "blue" : 
+                occurences >= 10 ? "green" : 
+                occurences >= 7 ? "lime" :
+                occurences >= 4 ? "yellow" : 
+                occurences >= 2 ? "amber" :
+                occurences >= 1 ? "orange" : "red");
+        }, 50);
+    }
+</script>
