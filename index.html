@@ -261,7 +261,7 @@
         guess.appendChild(commonLinksElem);
         guess.appendChild(occursElem);
 
-        guessesElem.appendChild(guess);
+        guessesElem.prepend(guess);
 
         setTimeout(() => {
             const target = filteredArticles[random(today, filteredArticles.length)];

@@ -1,8 +1,9 @@
 const fs = require('node:fs/promises');
 const pako = require('pako');
 
-async function gatherData(path, data) {
+async function gatherDataPrimitive(path, data, people) {
     const files = await fs.readdir(path, {withFileTypes: true});
+
     await Promise.all(files.map(file => (async function() {
         let filepath = path + "/" + file.name;
         let nameExists = false;
@@ -23,21 +24,43 @@ async function gatherData(path, data) {
                 alts.push(match[1]);
             }
 
-            for (let alt of alts) {
-                data[alt] = {
-                    redirect: name
+            if (content.includes("category: people") || content.includes("category: reference")) {
+                // person article
+                for (let alt of alts) {
+                    people.add(alt);
                 }
-            };
-            data[name] = {
-                links: links,
-                alts: alts,
-                content: content,
-            };
-
+                people.add(name);
+            } else {
+                // real article
+                for (let alt of alts) {
+                    data[alt] = {
+                        redirect: name
+                    }
+                };
+    
+                data[name] = {
+                    links: links,
+                    alts: alts,
+                    content: content,
+                };
+            }
         } else if (file.isDirectory()) {
-            await gatherData(filepath, data);
+            await gatherDataPrimitive(filepath, data, people);
         }
     })()));
+}
+
+async function gatherData(path, data) {
+    let people = new Set();
+    await gatherDataPrimitive(path, data, people);
+
+    console.log("Remove people...");
+
+    for (let article in data) {
+        if (data[article].links) {
+            data[article].links = data[article].links.filter(name => !people.has(name));
+        }
+    }
 }
 
 let data = {};
