@@ -1,4 +1,7 @@
 <style> 
+    body {
+        font-family: serif;
+    }
     main { 
         width: 512px;
         margin: auto;
@@ -15,10 +18,10 @@
         margin: 8px 0;
         align-items: center;
     }
-    .guess :first-child {
+    .guess .article {
         flex-grow: 1;
     }
-    .guess :not(:first-child) {
+    .guess :not(.article) {
         width: 32px;
         height: 32px;
         line-height: 32px;
@@ -80,7 +83,7 @@
     nlabordle <span class="tag">alpha</span>
 </h1>
 <div id="tagline">
-    <span id="today"></span> | <span id="difficulty">loading...</span>
+    <span id="today"></span> | <span id="difficulty">loading...</span> | <span id="timer">--:--</span>
 </div>
 
 <main id="main">
@@ -187,7 +190,7 @@
         let difficulty = links >= 512 ? "easy" :
             links >= 256 ? "medium" : 
             links >= 128 ? "hard" : "impossible"; 
-        document.getElementById("difficulty").innerText = difficulty + " [" + links + "]";
+        document.getElementById("difficulty").textContent = difficulty + " [" + links + "]";
 
         // load datalist
         const datalist = document.getElementById("articles");
@@ -198,6 +201,8 @@
         }
 
         // start game
+        loadTimer();
+        loadGuessData();
         document.getElementById("main").style.display = "block";
     }
     main();
@@ -246,22 +251,8 @@
         inputElem.className = "";
         previousGuesses.add(guessLink);
 
-        let guess = document.createElement("div");
-        guess.className = "guess";
-
-        let article = document.createElement("div");
-        article.innerText = guessLink;
-
-        let distanceElem = document.createElement("div");
-        let occursElem = document.createElement("div");
-        let commonLinksElem = document.createElement("div");
-
-        guess.appendChild(article);
-        guess.appendChild(distanceElem);
-        guess.appendChild(commonLinksElem);
-        guess.appendChild(occursElem);
-
-        guessesElem.prepend(guess);
+        let guessElem = createGuessElem(guessLink);
+        guessesElem.prepend(guessElem);
 
         setTimeout(() => {
             const target = filteredArticles[random(today, filteredArticles.length)];
@@ -274,39 +265,135 @@
             if (revDist !== undefined) dists.push(revDist);
             let avgDist = dists.length == 0 ? "∞" : dists.reduce((a, b) => a + b, 0) / dists.length;
 
-            distanceElem.innerText = avgDist;
-            distanceElem.classList.add(numberToColor(avgDist));
-            function numberToColor(num) {
-                return num == 0 ? "blue" : 
-                    num <= 1 ? "green" : 
-                    num <= 1.5 ? "lime" :
-                    num <= 2 ? "yellow" : 
-                    num <= 2.5 ? "amber" : 
-                    num <= 3 ? "orange" : "red";
+            if (dist == 0) {
+                stopTimer();
             }
 
-            let commonLinks = computeCommonLinks(target, guessLink);
-            commonLinksElem.innerText = commonLinks;
-            commonLinksElem.classList.add(
-                resolveLink(target) == guessLink ? "blue" : 
-                commonLinks >= 64 ? "green" : 
-                commonLinks >= 32 ? "lime" :
-                commonLinks >= 16 ? "yellow" : 
-                commonLinks >= 6 ? "amber" :
-                commonLinks >= 1 ? "orange" : "red");
+            updateGuessElem(guessElem, {
+                distance: avgDist,
+                commonlinks: computeCommonLinks(target, guessLink),
+                occurs: data[target].content.split(guessLink).length - 1
+            });
 
-            let occurences = data[target].content.split(guessLink).length - 1;
-            occursElem.innerText = occurences;
-            occursElem.classList.add(
-                resolveLink(target) == guessLink ? "blue" : 
-                occurences >= 10 ? "green" : 
-                occurences >= 7 ? "lime" :
-                occurences >= 4 ? "yellow" : 
-                occurences >= 2 ? "amber" :
-                occurences >= 1 ? "orange" : "red");
-            if (resolveLink(target) == guessLink) {
-                guess.classList.add("blue");
-            }
+            saveGuessData();
         }, 50);
+    }
+
+    function saveGuessData() {
+        let guesses = [];
+        for (let guessElem of guessesElem.children) {
+            let article = guessElem.querySelector(".article").textContent;
+            let distance = guessElem.querySelector(".distance").textContent;
+            let occurs = guessElem.querySelector(".occurs").textContent;
+            let commonlinks = guessElem.querySelector(".commonlinks").textContent;
+            guesses.push({
+                article, distance, occurs, commonlinks
+            });
+        }
+        localStorage.setItem("guesses-" + today, JSON.stringify(guesses));
+    }
+
+    function loadGuessData() {
+        let guesses = [];
+        try {
+            guesses = JSON.parse(localStorage.getItem("guesses-" + today)) || [];
+        } catch(err) { 
+            console.warn("no previous guess data");
+        }
+
+        for (let guess of guesses) {
+            if (guess.distance == 0) {
+                stopTimer();
+            }
+
+            let guessElem = createGuessElem(guess.article);
+            updateGuessElem(guessElem, guess);
+            guessesElem.append(guessElem);
+        }
+    }
+
+    function createGuessElem(article) {
+        let guessElem = document.createElement("div");
+        guessElem.className = "guess";
+
+        let articleElem = document.createElement("div");
+        articleElem.textContent = article;
+        articleElem.className = "article";
+
+        let distanceElem = document.createElement("div");
+        distanceElem.className = "distance";
+
+        let commonLinksElem = document.createElement("div");
+        commonLinksElem.className = "commonlinks";
+
+        let occursElem = document.createElement("div");
+        occursElem.className = "occurs";
+
+        guessElem.appendChild(articleElem);
+        guessElem.appendChild(distanceElem);
+        guessElem.appendChild(commonLinksElem);
+        guessElem.appendChild(occursElem);
+        return guessElem;
+    }
+
+    function updateGuessElem(guessElem, data) {
+        let distanceElem = guessElem.querySelector(".distance"),
+            commonLinksElem = guessElem.querySelector(".commonlinks"),
+            occursElem = guessElem.querySelector(".occurs");
+
+        distanceElem.textContent = data.distance;
+        commonLinksElem.textContent = data.commonlinks;
+        occursElem.textContent = data.occurs;
+
+        if (data.distance == 0) {
+            distanceElem.classList.add("blue");
+            commonLinksElem.classList.add("blue");
+            occursElem.classList.add("blue");
+            guessElem.classList.add("blue");
+            return;
+        }
+
+        distanceElem.classList.add(
+            data.distance <= 1 ? "green" : 
+            data.distance <= 1.5 ? "lime" :
+            data.distance <= 2 ? "yellow" : 
+            data.distance <= 2.5 ? "amber" : 
+            data.distance <= 3 ? "orange" : "red");
+        commonLinksElem.classList.add(
+            data.commonlinks >= 48 ? "green" : 
+            data.commonlinks >= 16 ? "lime" :
+            data.commonlinks >= 8 ? "yellow" : 
+            data.commonlinks >= 3 ? "amber" :
+            data.commonlinks >= 1 ? "orange" : "red");
+        occursElem.classList.add(
+            data.occurs >= 10 ? "green" : 
+            data.occurs >= 7 ? "lime" :
+            data.occurs >= 4 ? "yellow" : 
+            data.occurs >= 2 ? "amber" :
+            data.occurs >= 1 ? "orange" : "red");
+    }
+
+    // Timer
+    let timer = 0;
+    let timerInterval = -1;
+    function formatTimer(timer) {
+        let secs = timer % 60;
+        let mins = Math.floor(timer / 60);
+
+        return mins + ":" + String(secs).padStart(2, "0");
+    }
+    function loadTimer() {
+        timer = localStorage.getItem("timer-" + today) | 0;
+        document.getElementById("timer").textContent = formatTimer(timer);
+
+        timerInterval = setInterval(function() {
+            timer += 1;
+            document.getElementById("timer").textContent = formatTimer(timer);
+            localStorage.setItem("timer-" + today, timer);
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
     }
 </script>
