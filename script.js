@@ -24,7 +24,13 @@ async function gatherDataPrimitive(path, data, people) {
                 alts.push(match[1]);
             }
 
-            if (content.includes("category: people") || content.includes("category: reference")) {
+            if (content.includes("category: people") || content.includes("category: reference")
+                || content.includes("[[!include physicscontents]]")
+                || content.includes("[[!include fields and quanta - table]]")
+// cannot exclude the following
+//                || content.includes("[[!include functorial quantum field theory - contents]]")
+//                || content.includes("[[!include AQFT and operator algebra contents]]")
+) {
                 // person article
                 for (let alt of alts) {
                     people.add(alt);

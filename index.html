@@ -30,20 +30,21 @@
     }
 
     .blue {
-        background: hsl(200, 90%, 60%); }
+        background: hsl(200, 85%, 50%); }
     .green {
-        background: hsl(130, 90%, 60%); }
+        background: hsl(130, 85%, 50%); }
     .lime {
-        background: hsl(80, 90%, 60%); }
+        background: hsl(80, 90%, 55%); }
     .yellow {
-        background: hsl(60, 90%, 60%); }
+        background: hsl(60, 85%, 50%); }
     .amber {
-        background: hsl(45, 90%, 55%); }
+        color: black;
+        background: hsl(45, 95%, 50%); }
     .orange {
-        background: hsl(25, 90%, 50%);
+        background: hsl(25, 85%, 55%);
         color: white; }
     .red {
-        background: hsl(0, 90%, 50%);
+        background: hsl(0, 75%, 55%);
         color: white; }
 
     #form { 
@@ -241,15 +242,15 @@
         return ((hash % n) + n) % n;
     }
     
-    let previousGuesses = new Set();
     function guess() {
+        const previousGuesses = new Set(Array.from(guessesElem.querySelectorAll(".article")).map(x => x.textContent));
+
         let guessLink = resolveLink(inputElem.value);
         if (!(guessLink in data) || previousGuesses.has(guessLink)) {
             inputElem.classList.add("invalid");
             return;
         }
         inputElem.className = "";
-        previousGuesses.add(guessLink);
 
         let guessElem = createGuessElem(guessLink);
         guessesElem.prepend(guessElem);
