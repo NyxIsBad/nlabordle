@@ -24,7 +24,8 @@ async function gatherDataPrimitive(path, data, people) {
                 alts.push(match[1]);
             }
 
-            if (content.includes("category: people") || content.includes("category: reference")
+            if (content.includes("category: people") || content.includes("category: reference") || content.includes("category: meta") ||
+                content.includes("category:people") || content.includes("category:reference") || content.includes("category:meta")
                 || content.includes("[[!include physicscontents]]")
                 || content.includes("[[!include fields and quanta - table]]")
 // cannot exclude the following
