@@ -76,6 +76,55 @@
         position: relative;
         top: -4px;
     }
+
+    dialog {
+        width: 384px;
+        padding: 32px;
+        padding-bottom: 24px;
+        text-align: center;
+        flex-direction: column;
+    }
+    dialog h2 {
+        margin-top: 0;
+        text-align: center;
+        margin-bottom: 0;
+    }
+    dialog p {
+        margin-top: 4px;
+        margin-bottom: 16px;
+    }
+    dialog button {
+        text-align: center;
+        margin: auto;
+        display: block;
+    }
+    #popup-word {
+        color: #193c78;
+    }
+    #popup-copied {
+        text-align: center;
+        margin-top: 4px;
+        font-size: 12px;
+    }
+    .close {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+    }
+
+    .button {
+        background: #226622;
+        color: white;
+        border: 0;
+        padding: 4px 8px;
+        cursor: pointer;
+    }
 </style>
 
 <meta charset="utf8">
@@ -84,7 +133,7 @@
     <span style="color:#226622">nLab</span>ordle <span class="tag">alpha</span>
 </h1>
 <div id="tagline">
-    <span id="today"></span> | <span id="difficulty">loading...</span> | <span id="timer">--:--</span>
+    <span id="today"></span> | <span id="difficulty">loading...</span> | <span id="timer">--:--</span> / 15:00
 </div>
 
 <main id="main">
@@ -100,6 +149,16 @@
 <datalist id="articles">
 
 </datalist>
+
+<dialog id="popup">    
+    <a class="close" onclick="closePopup()">&times;</a>
+    <h2>-</h2>
+    <p>you <span id="popup-status">-</span>! the word was: <span id="popup-word"></span></p>
+    <img src="happynlab.svg">
+    <button class="button" onclick="share()" style="margin-top: 16px">Share</button>
+    <div id="popup-copied">results copied to clipboard</div>
+</dialog>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" integrity="sha512-g2TeAWw5GPnX7z0Kn8nFbYfeHcvAu/tx6d6mrLe/90mkCxO+RcptyYpksUz35EO337F83bZwcmUyHiHamspkfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
@@ -205,6 +264,7 @@
         loadTimer();
         loadGuessData();
         document.getElementById("main").style.display = "block";
+        showDialog();
     }
     main();
 
@@ -277,6 +337,7 @@
             });
 
             saveGuessData();
+            showDialog();
         }, 50);
     }
 
@@ -391,10 +452,61 @@
             timer += 1;
             document.getElementById("timer").textContent = formatTimer(timer);
             localStorage.setItem("timer-" + today, timer);
+
+            if (timer >= 60 * 15) {
+                stopTimer();
+                showDialog();
+            }
         }, 1000);
     }
 
     function stopTimer() {
         clearInterval(timerInterval);
+    }
+
+    let hasShownDialog = false;
+    function showDialog() {
+        if (hasShownDialog) return;
+        document.getElementById("popup-copied").style.opacity = "0";
+        if (timer >= 60 * 15) {
+            document.getElementById("popup-status").style.color = "#a41e32";
+            document.getElementById("popup-status").textContent = "ran out of time";
+            document.getElementById("popup-word").textContent = filteredArticles[random(today, filteredArticles.length)];
+            document.getElementById("popup").querySelector("h2").textContent = "womp womp";
+            document.getElementById("popup").showModal();
+            hasShownDialog = true;
+        } else if (guessesElem.querySelector(".guess .blue") ) {
+            document.getElementById("popup-status").style.color = "#226622";
+            document.getElementById("popup-status").textContent = "win";
+            document.getElementById("popup-word").textContent = filteredArticles[random(today, filteredArticles.length)];
+            document.getElementById("popup").querySelector("h2").textContent = "congratulations";
+            document.getElementById("popup").showModal();
+            hasShownDialog = true;
+        }
+    }
+
+    function closePopup() {
+        document.getElementById("popup").close();
+    }
+
+    function shareColor(elem) {
+        return elem.classList.contains("red") ? "🟥" :
+            elem.classList.contains("orange") ? "🟫" :
+            elem.classList.contains("amber") ? "🟧" :
+            elem.classList.contains("yellow") ? "🟨" :
+            elem.classList.contains("lime") || elem.classList.contains("green") ? "🟩" :
+            elem.classList.contains("blue") ? "🟦" : "⬛";
+    }
+
+    async function share() {
+        let parts = today.split("-").slice(1);
+        let text = "nLabordle " + Number(parts[0]) + "/" + parts[1].padStart(2, "0") + "\n" + guessesElem.children.length + " guesses | " + formatTimer(timer) + (guessesElem.querySelector(".guess .blue") ? "" : " | failed") + "\n";
+        for (let guessElem of guessesElem.children) {
+            text += "\n" + [shareColor(guessElem.querySelector(".distance")),
+                shareColor(guessElem.querySelector(".commonlinks")),
+                shareColor(guessElem.querySelector(".occurs"))].join("");
+        }
+        await navigator.clipboard.writeText(text);
+        document.getElementById("popup-copied").style.opacity = "1";
     }
 </script>
