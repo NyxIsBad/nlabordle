@@ -435,6 +435,15 @@
             data.occurs >= 1 ? "orange" : "red");
     }
 
+    // is Hidden
+    let isHidden = false;
+    window.addEventListener("blur", function() {
+        isHidden = true;
+    });
+    window.addEventListener("focus", function() {
+        isHidden = false;
+    });
+
     // Timer
     let timer = 0;
     let timerInterval = -1;
@@ -452,7 +461,7 @@
             return;
         }
         timerInterval = setInterval(function() {
-            if (document.hidden) {
+            if (isHidden) {
                 return;
             }
 
