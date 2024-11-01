@@ -448,7 +448,14 @@
         timer = localStorage.getItem("timer-" + today) | 0;
         document.getElementById("timer").textContent = formatTimer(timer);
 
+        if (timer >= 60 * 15) {
+            return;
+        }
         timerInterval = setInterval(function() {
+            if (document.hidden) {
+                return;
+            }
+
             timer += 1;
             document.getElementById("timer").textContent = formatTimer(timer);
             localStorage.setItem("timer-" + today, timer);
