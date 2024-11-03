@@ -26,6 +26,8 @@ async function gatherDataPrimitive(path, data, people) {
 
             if (content.includes("category: people") || content.includes("category: reference") || content.includes("category: meta") ||
                 content.includes("category:people") || content.includes("category:reference") || content.includes("category:meta")
+                || content.includes("[[!include quantum systems -- contents]]")
+                || content.includes("[[!include string theory - contents]]")
                 || content.includes("[[!include physicscontents]]")
                 || content.includes("[[!include fields and quanta - table]]")
 // cannot exclude the following

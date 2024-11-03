@@ -153,7 +153,7 @@
 <dialog id="popup">    
     <a class="close" onclick="closePopup()">&times;</a>
     <h2>-</h2>
-    <p>you <span id="popup-status">-</span>! the word was: <span id="popup-word"></span></p>
+    <p>you <span id="popup-status">-</span>! the word was: <a target="_blank" id="popup-word"></a></p>
     <img src="happynlab.svg">
     <button class="button" onclick="share()" style="margin-top: 16px">Share</button>
     <div id="popup-copied">results copied to clipboard</div>
@@ -484,21 +484,25 @@
     function showDialog() {
         if (hasShownDialog) return;
         document.getElementById("popup-copied").style.opacity = "0";
+        let wordElem = document.getElementById("popup-word");
         if (timer >= 60 * 15) {
             document.getElementById("popup-status").style.color = "#a41e32";
             document.getElementById("popup-status").textContent = "ran out of time";
-            document.getElementById("popup-word").textContent = filteredArticles[random(today, filteredArticles.length)];
             document.getElementById("popup").querySelector("h2").textContent = "womp womp";
-            document.getElementById("popup").showModal();
-            hasShownDialog = true;
         } else if (guessesElem.querySelector(".guess .blue") ) {
             document.getElementById("popup-status").style.color = "#226622";
             document.getElementById("popup-status").textContent = "win";
-            document.getElementById("popup-word").textContent = filteredArticles[random(today, filteredArticles.length)];
             document.getElementById("popup").querySelector("h2").textContent = "congratulations";
-            document.getElementById("popup").showModal();
-            hasShownDialog = true;
+        } else {
+            return;
         }
+
+        let word = filteredArticles[random(today, filteredArticles.length)];
+        wordElem.textContent = word;
+        wordElem.href = "https://ncatlab.org/nlab/show/" + word.replace(/\s+/g, "+");
+
+        document.getElementById("popup").showModal();
+        hasShownDialog = true;
     }
 
     function closePopup() {
