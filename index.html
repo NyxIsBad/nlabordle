@@ -167,9 +167,9 @@
     async function readData() {
         const response = await fetch("precomputed.bin");
         const buffer = await response.arrayBuffer();
-        const data = pako.ungzip(new Uint8Array(buffer));
+        const decompressedData = pako.ungzip(new Uint8Array(buffer));
 
-        const jsonString = new TextDecoder("utf-8").decode(data);
+        const jsonString = new TextDecoder("utf-8").decode(decompressedData);
         data = JSON.parse(jsonString);
         /*
         data contains keys
