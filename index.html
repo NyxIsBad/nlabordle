@@ -163,93 +163,32 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" integrity="sha512-g2TeAWw5GPnX7z0Kn8nFbYfeHcvAu/tx6d6mrLe/90mkCxO+RcptyYpksUz35EO337F83bZwcmUyHiHamspkfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     let data;
+    // Read precomputed data
+    async function readData() {
+        const response = await fetch("precomputed.bin");
+        const buffer = await response.arrayBuffer();
+        const data = pako.ungzip(new Uint8Array(buffer));
 
-    function resolveLink(link) {
-        if (data[link] == undefined) {
-            // console.warn("unknown article when resolving: " + link);
-            return link;
-        }
-        if (data[link].redirect && data[link].redirect != link) {
-            return resolveLink(data[link].redirect);
-        }
-        return link;
+        const jsonString = new TextDecoder("utf-8").decode(data);
+        data = JSON.parse(jsonString);
+        /*
+        data contains keys
+            difficulty: str,
+            target: str, 
+            data: {
+                article: tuple(avg_distance, common_links, occurs)
+            }
+            filtered: list[str]
+            date: tuple(year, month, day)
+        */
     }
+    readData();
 
-    function computeCommonLinks(a, b) {
-        a = resolveLink(a); b = resolveLink(b);
-        let aLinks = new Set(data[a].links.map(resolveLink));
-        let bLinks = new Set(data[b].links.map(resolveLink));
-        for (let article in data) {
-            if (data[article].links && data[article].links.map(resolveLink).includes(a)) {
-                aLinks.add(article);
-            }
-            if (data[article].links && data[article].links.map(resolveLink).includes(b)) {
-                bLinks.add(article);
-            }
-        }
-        // console.info(aLinks.intersection(bLinks));
-        return aLinks.intersection(bLinks).size;
-    }
-
-    function computeDistance(from, target) {
-        from = resolveLink(from);
-        target = resolveLink(target);
-
-        if (from == target) { return 0; }
-
-        let distances = {};
-        distances[from] = 0;
-
-        let queue = [from];
-        for (;;) {
-            let article = queue.shift();
-            if (!article) {
-                break;
-            }
-
-            if (!(data[article] && data[article].links)) {
-                // console.warn("unknown article when computing: " + article);
-                continue;
-            }
-
-            let links = data[article].links.map(link => resolveLink(link));
-            for (let link of links) {
-                if (link in distances) {
-                    continue;
-                }
-
-                distances[link] = distances[article] + 1;
-                if (link == target) {
-                    break;
-                }
-                queue.push(link);
-            }
-        }
-
-        return distances[target];
-    }
-
-    let filteredArticles;
-    let artMap = {};
     async function main() {
-        data = JSON.parse(new TextDecoder().decode(pako.inflate(await (await fetch("data.bin")).arrayBuffer())));
 
-        // load article pool
-        for (let article in data) {
-            if (!data[article].links) continue;
-            for (let link of data[article].links) {
-                link = resolveLink(link);
-                artMap[link] = (artMap[link] | 0) + 1;
-            }
-        }
-
-        filteredArticles = Object.keys(data).filter(art => data[art].links).filter(art => artMap[art] >= 64);
-        filteredArticles.sort();
-
-        const links = artMap[filteredArticles[random(today, filteredArticles.length)]];
-        let difficulty = links >= 512 ? "easy" :
-            links >= 256 ? "medium" : 
-            links >= 128 ? "hard" : "impossible"; 
+        let filteredArticles = data.filtered;
+        let difficulty = data.difficulty;
+        
         document.getElementById("difficulty").textContent = difficulty + " [" + links + "]";
 
         // load datalist
@@ -269,8 +208,7 @@
     main();
 
     // GUI
-    const date = new Date();
-    const today = date.getFullYear() +  "-" + (date.getMonth() + 1) + "-" + date.getDate();
+    const today = data.date[0].toString() +  "-" + data.date[1].toString() + "-" + data.date[2].toString();
     document.getElementById("today").textContent = today;
 
     const inputElem  = document.getElementById("input");
@@ -282,35 +220,31 @@
     function guess() {
         const previousGuesses = new Set(Array.from(guessesElem.querySelectorAll(".article")).map(x => x.textContent));
 
-        let guessLink = resolveLink(inputElem.value);
-        if (!(guessLink in data) || previousGuesses.has(guessLink)) {
+        let guessName = inputElem.value;
+        if (!(guessName in data.filtered) || previousGuesses.has(guessName)) {
             inputElem.classList.add("invalid");
             return;
         }
         inputElem.className = "";
 
-        let guessElem = createGuessElem(guessLink);
+        let guessElem = createGuessElem(guessName);
         guessesElem.prepend(guessElem);
 
         setTimeout(() => {
-            const target = filteredArticles[random(today, filteredArticles.length)];
-//            console.info(target);
+            let target = data.target;
+            let guess_info = data.data[guessName];
+            let guess_distance = guess_info[0];
+            let guess_common_links = guess_info[1];
+            let guess_occurs = guess_info[2];
 
-            let dists = [];
-            let dist = computeDistance(guessLink, target);
-            if (dist !== undefined) dists.push(dist);
-            let revDist = computeDistance(target, guessLink);
-            if (revDist !== undefined) dists.push(revDist);
-            let avgDist = dists.length == 0 ? "∞" : dists.reduce((a, b) => a + b, 0) / dists.length;
-
-            if (dist == 0) {
+            if (guess_distance == 0) {
                 stopTimer();
             }
 
             updateGuessElem(guessElem, {
-                distance: avgDist,
-                commonlinks: computeCommonLinks(target, guessLink),
-                occurs: data[target].content.split(guessLink).length - 1
+                distance: guess_distance,
+                commonlinks: guess_common_links,
+                occurs: guess_occurs
             });
 
             saveGuessData();

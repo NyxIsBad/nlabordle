@@ -79,7 +79,7 @@ def random(n):
     hash_value ^= c_int32(hash_value << 13).value
     hash_value ^= c_int32(hash_value >> 7).value
     hash_value ^= c_int32(hash_value << 17).value
-    return c_int32(hash_value).value % n
+    return year, month, day, c_int32(hash_value).value % n
 
 # Load data and return relevant values
 def load_data():
@@ -101,7 +101,8 @@ def load_data():
     
     filtered_articles = [art for art in data if data[art].get('links') is not None and article_map.get(art, 0) >= 64]
     filtered_articles.sort()
-    target = filtered_articles[random(len(filtered_articles))]
+    y, m, d, idx = random(len(filtered_articles))
+    target = filtered_articles[idx]
     links = article_map[target]
     difficulty = ''
     if links >= 512:
@@ -113,7 +114,7 @@ def load_data():
     else:
         difficulty = 'impossible'
 
-    return data, filtered_articles, difficulty, target
+    return data, filtered_articles, difficulty, target, y, m, d
 
 def precompute(raw_data: dict, filtered: list[str], target: str):
     # Essentially we want to precompute the common links and the distance between every pair of articles
@@ -143,13 +144,14 @@ def precompute(raw_data: dict, filtered: list[str], target: str):
 
 # calculate runtime
 start = time.time()
-raw_data, filtered, difficulty, target = load_data()
+raw_data, filtered, difficulty, target, y, m, d = load_data()
 computed_data = precompute(raw_data, filtered, target)
 data = {
     'difficulty': difficulty,
     'target': target,
     'data': computed_data,
-    'filtered': filtered
+    'filtered': filtered,
+    'date': (y, m, d)
 }
 with open("precomputed.bin", 'wb') as file:
     file.write(zlib.compress(json.dumps(data).encode('utf-8')))
