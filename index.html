@@ -278,18 +278,6 @@
         inputElem.className = "";
     };
     const guessesElem = document.getElementById("guesses");
-
-    // Choose a random article from the pool
-    function random(date, n) {
-        let year = date.split("-")[0] | 0,
-            month = date.split("-")[1] | 0,
-            day = date.split("-")[2] | 0;
-        let hash = day + month * 31 + year * 31 * 12;
-        hash ^= hash << 13;
-        hash ^= hash >> 7;
-        hash ^= hash << 17;
-        return ((hash % n) + n) % n;
-    }
     
     function guess() {
         const previousGuesses = new Set(Array.from(guessesElem.querySelectorAll(".article")).map(x => x.textContent));
