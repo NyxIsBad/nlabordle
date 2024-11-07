@@ -124,7 +124,7 @@ def precompute(raw_data: dict, filtered: list[str], target: str):
     data = {}
     # Dict contains a tuple of (avg_distance,, commonlinks, occurrences)
     data[start] = (0, 0, 0)
-    for article in tqdm(filtered[:10], desc="Precomputing"):
+    for article in tqdm(filtered, desc="Precomputing"):
         if article == start:
             continue
         article_link = resolveLink(raw_data, article)
@@ -139,17 +139,19 @@ def precompute(raw_data: dict, filtered: list[str], target: str):
             computeCommonLinks(raw_data, start, article),
             occurrences
         )
-    with open("precomputed.bin", 'wb') as file:
-        compressed_data = zlib.compress(json.dumps(data).encode('utf-8'))
-        file.write(compressed_data)
-    # for debugging purposes
-    with open("precomputed.json", 'w') as file:
-        file.write(json.dumps(data))
     return data
 
 # calculate runtime
 start = time.time()
 raw_data, filtered, difficulty, target = load_data()
 computed_data = precompute(raw_data, filtered, target)
+data = {
+    'difficulty': difficulty,
+    'target': target,
+    'data': computed_data,
+    'filtered': filtered
+}
+with open("precomputed.bin", 'wb') as file:
+    file.write(zlib.compress(json.dumps(data).encode('utf-8')))
 end = time.time()
 print(f"Time taken: {end - start} seconds")
