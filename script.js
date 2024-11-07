@@ -1,16 +1,28 @@
+/*
+
+This script reads the nLab content and generates a data.bin file that contains the data in a compressed format.
+
+It is only used to generate the data.bin file, and is not used in the actual website; thus should only be run once to generate the data.bin file and not be run again.
+
+*/
+
 const fs = require('node:fs/promises');
 const pako = require('pako');
 
 async function gatherDataPrimitive(path, data, people) {
+    // Read directory
     const files = await fs.readdir(path, {withFileTypes: true});
-
+    
+    // For each file
     await Promise.all(files.map(file => (async function() {
         let filepath = path + "/" + file.name;
         let nameExists = false;
         try {
+            // Try to read the name file
             await fs.stat(filepath + "/name");
             nameExists = true;
         } catch(err) {}
+        // If it exists, read the name and content
         if (nameExists) {
             let name = await fs.readFile(filepath + "/name", {encoding: "utf-8"});
             let content = await fs.readFile(filepath + "/content.md", { encoding: "utf-8" });
@@ -23,7 +35,7 @@ async function gatherDataPrimitive(path, data, people) {
                 if (match == null) break;
                 alts.push(match[1]);
             }
-
+            // If the article is a person article, add it to the people set
             if (content.includes("category: people") || content.includes("category: reference") || content.includes("category: meta") ||
                 content.includes("category:people") || content.includes("category:reference") || content.includes("category:meta")
                 || content.includes("[[!include quantum systems -- contents]]")
@@ -61,10 +73,11 @@ async function gatherDataPrimitive(path, data, people) {
 
 async function gatherData(path, data) {
     let people = new Set();
+    // Gather data
     await gatherDataPrimitive(path, data, people);
 
     console.log("Remove people...");
-
+    // Remove people from links
     for (let article in data) {
         if (data[article].links) {
             data[article].links = data[article].links.filter(name => !people.has(name));
@@ -72,8 +85,12 @@ async function gatherData(path, data) {
     }
 }
 
+// Main
+
 let data = {};
 (async function() {
+    // Gather Data wrapper
     await gatherData("./nlab-content", data);
+    // Write data to data.bin
     await fs.writeFile("data.bin", pako.deflate(new TextEncoder().encode(JSON.stringify(data))));
 })();
