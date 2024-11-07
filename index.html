@@ -166,10 +166,10 @@
 
     function resolveLink(link) {
         if (data[link] == undefined) {
-//            console.warn("unknown article when resolving: " + link);
+            // console.warn("unknown article when resolving: " + link);
             return link;
         }
-        if (data[link].redirect &&data[link].redirect != link) {
+        if (data[link].redirect && data[link].redirect != link) {
             return resolveLink(data[link].redirect);
         }
         return link;
@@ -187,7 +187,7 @@
                 bLinks.add(article);
             }
         }
-//        console.info(aLinks.intersection(bLinks));
+        // console.info(aLinks.intersection(bLinks));
         return aLinks.intersection(bLinks).size;
     }
 
@@ -208,7 +208,7 @@
             }
 
             if (!(data[article] && data[article].links)) {
-//                console.warn("unknown article when computing: " + article);
+                // console.warn("unknown article when computing: " + article);
                 continue;
             }
 
@@ -279,18 +279,7 @@
     };
     const guessesElem = document.getElementById("guesses");
 
-    const targets = {
-        "2024-10-24": "set",
-        "2024-10-25": "object",
-        "2024-10-26": "ring",
-        "2024-10-27": "differential form",
-        "2024-10-28": "manifold",
-        "2024-10-29": "rational number",
-        "2024-10-30": "circle",
-//        "2024-10-27": "The Rising Sea",
-//        "2024-10-28": "decategorification"
-    };
-
+    // Choose a random article from the pool
     function random(date, n) {
         let year = date.split("-")[0] | 0,
             month = date.split("-")[1] | 0,
@@ -435,6 +424,7 @@
             data.occurs >= 1 ? "orange" : "red");
     }
 
+    // Irrelevant functions to preprocessing
     // is Hidden
     let isHidden = false;
     window.addEventListener("blur", function() {
@@ -504,7 +494,7 @@
         document.getElementById("popup").showModal();
         hasShownDialog = true;
     }
-
+    
     function closePopup() {
         document.getElementById("popup").close();
     }
