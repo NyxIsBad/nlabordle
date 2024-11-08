@@ -3,7 +3,7 @@ name: Precompute and Deploy
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - master  # Trigger on push to main branch
   schedule:
     - cron: '0 0 * * *'  # Runs every 24 hours
 
