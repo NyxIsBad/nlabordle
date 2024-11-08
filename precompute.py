@@ -146,14 +146,20 @@ def precompute(raw_data: dict, filtered: list[str], target: str):
 start = time.time()
 raw_data, filtered, difficulty, target, y, m, d = load_data()
 computed_data = precompute(raw_data, filtered, target)
-data = {
+article_data = {
     'difficulty': difficulty,
     'target': target,
     'data': computed_data,
-    'filtered': filtered,
-    'date': (y, m, d)
+    'filtered': filtered
 }
-with open("precomputed.bin", 'wb') as file:
-    file.write(zlib.compress(json.dumps(data).encode('utf-8')))
+time_data = {
+    'year': y,
+    'month': m,
+    'day': d
+}
+with open("data.bin", 'wb') as file:
+    file.write(zlib.compress(json.dumps(article_data).encode('utf-8')))
+with open("time.bin", 'wb') as file:
+    file.write(zlib.compress(json.dumps(time_data).encode('utf-8')))
 end = time.time()
 print(f"Time taken: {end - start} seconds")

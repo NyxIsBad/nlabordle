@@ -162,29 +162,16 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" integrity="sha512-g2TeAWw5GPnX7z0Kn8nFbYfeHcvAu/tx6d6mrLe/90mkCxO+RcptyYpksUz35EO337F83bZwcmUyHiHamspkfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
-    let data;
-    // Read precomputed data
-    async function readData() {
-        const response = await fetch("precomputed.bin");
+    async function readData(path) {
+        const response = await fetch(path);
         const buffer = await response.arrayBuffer();
         const decompressedData = pako.ungzip(new Uint8Array(buffer));
-
         const jsonString = new TextDecoder("utf-8").decode(decompressedData);
-        data = JSON.parse(jsonString);
-        /*
-        data contains keys
-            difficulty: str,
-            target: str, 
-            data: {
-                article: tuple(avg_distance, common_links, occurs)
-            }
-            filtered: list[str]
-            date: tuple(year, month, day)
-        */
+        return JSON.parse(jsonString);
     }
-    readData();
-
+    let data;
     async function main() {
+        data = await readData("data.bin");
 
         let filteredArticles = data.filtered;
         let difficulty = data.difficulty;
@@ -208,11 +195,15 @@
     main();
 
     // GUI
-    const today = data.date[0].toString() +  "-" + data.date[1].toString() + "-" + data.date[2].toString();
-    document.getElementById("today").textContent = today;
+    async function gui() {
+        let time = await readData("time.bin");
+        const today = time['year'].toString() +  "-" + time['month'].toString() + "-" + time['day'].toString();
+        document.getElementById("today").textContent = today;
+    }
+    gui();
 
     const inputElem  = document.getElementById("input");
-    inputElem.oninput = function() { 
+    inputElem.oninput = function() {
         inputElem.className = "";
     };
     const guessesElem = document.getElementById("guesses");
@@ -231,7 +222,6 @@
         guessesElem.prepend(guessElem);
 
         setTimeout(() => {
-            let target = data.target;
             let guess_info = data.data[guessName];
             let guess_distance = guess_info[0];
             let guess_common_links = guess_info[1];
