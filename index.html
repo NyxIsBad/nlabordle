@@ -1,0 +1,436 @@
+<style> 
+    body {
+        font-family: serif;
+    }
+    main { 
+        width: 512px;
+        margin: auto;
+        display: none;
+    }
+    #guesses { 
+        margin-top: 8px;
+    }
+    .guess {
+        display: flex;
+        flex-direction: row;
+        padding: 0 8px;
+        padding-right: 0;
+        margin: 8px 0;
+        align-items: center;
+    }
+    .guess .article {
+        flex-grow: 1;
+    }
+    .guess :not(.article) {
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        text-align: center;
+        margin-left: 8px;
+    }
+
+    .blue {
+        background: hsl(200, 85%, 50%); }
+    .green {
+        background: hsl(130, 85%, 50%); }
+    .lime {
+        background: hsl(80, 90%, 55%); }
+    .yellow {
+        background: hsl(60, 85%, 50%); }
+    .amber {
+        color: black;
+        background: hsl(45, 95%, 50%); }
+    .orange {
+        background: hsl(25, 85%, 55%);
+        color: white; }
+    .red {
+        background: hsl(0, 75%, 55%);
+        color: white; }
+
+    #form { 
+        display: flex;
+        flex-direction: row;
+    }
+    #form input { flex-grow: 1; padding: 4px 8px; border: 2px solid black; }
+    #form button { width: 72px; padding: 4px 8px; margin-left: 8px; }
+    h1, #tagline {
+        text-align: center;
+        margin: 0;
+    }
+    h1 {
+        margin-top: 64px;
+    }
+    #tagline { margin-bottom: 16px; }
+
+    .invalid {
+        border-color: red  !important;
+    }
+
+    .tag {
+        font-size: 12px;
+        padding: 4px 8px;
+        display: inline-block;
+        background: hsl(0, 75%, 50%);
+        color: white;
+        
+        position: relative;
+        top: -4px;
+    }
+
+    dialog {
+        min-width: 384px;
+        padding: 32px;
+        padding-bottom: 24px;
+        text-align: center;
+        flex-direction: column;
+    }
+    dialog h2 {
+        margin-top: 0;
+        text-align: center;
+        margin-bottom: 0;
+    }
+    dialog p {
+        margin-top: 4px;
+        margin-bottom: 16px;
+    }
+    dialog button {
+        text-align: center;
+        margin: auto;
+        display: block;
+    }
+    #popup-word {
+        color: #193c78;
+    }
+    #popup-copied {
+        text-align: center;
+        margin-top: 4px;
+        font-size: 12px;
+    }
+    .close {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+    }
+
+    .button {
+        background: #226622;
+        color: white;
+        border: 0;
+        padding: 4px 8px;
+        cursor: pointer;
+    }
+</style>
+
+<meta charset="utf8">
+
+<h1>
+    <span style="color:#226622">nLab</span>ordle <span class="tag">alpha</span>
+</h1>
+<div id="tagline">
+    <span id="today"></span> | <span id="difficulty">loading...</span> | <span id="timer">--:--</span> / 15:00
+</div>
+
+<main id="main">
+    <div id="form">
+        <input list="articles" placeholder="Guess" id="input" onkeydown="if (event.keyCode == 13) guess()">
+        <button onclick="guess()">Guess</button>    
+    </div>
+    <div id="guesses">
+
+    </div>
+</main>
+
+<datalist id="articles">
+
+</datalist>
+
+<dialog id="popup">    
+    <a class="close" onclick="closePopup()">&times;</a>
+    <h2>-</h2>
+    <p>you <span id="popup-status">-</span>! the word was: <a target="_blank" id="popup-word"></a></p>
+    <img src="happynlab.svg">
+    <button class="button" onclick="share()" style="margin-top: 16px">Share</button>
+    <div id="popup-copied">results copied to clipboard</div>
+</dialog>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" integrity="sha512-g2TeAWw5GPnX7z0Kn8nFbYfeHcvAu/tx6d6mrLe/90mkCxO+RcptyYpksUz35EO337F83bZwcmUyHiHamspkfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+    async function readData(path) {
+        const response = await fetch(path);
+        const buffer = await response.arrayBuffer();
+        const decompressedData = pako.ungzip(new Uint8Array(buffer));
+        const jsonString = new TextDecoder("utf-8").decode(decompressedData);
+        return JSON.parse(jsonString);
+    }
+    let data;
+    async function main() {
+        data = await readData("pre_data.bin");
+
+        let filteredArticles = data.filtered;
+        let difficulty = data.difficulty;
+        let links = data.links;
+        
+        document.getElementById("difficulty").textContent = difficulty + " [" + links + "]";
+
+        // load datalist
+        const datalist = document.getElementById("articles");
+        for (let article of filteredArticles) {
+            let option = document.createElement("option");
+            option.textContent = article;
+            datalist.appendChild(option);
+        }
+
+        // start game
+        loadTimer();
+        loadGuessData();
+        document.getElementById("main").style.display = "block";
+        showDialog();
+    }
+    main();
+
+    // GUI
+    async function gui() {
+        let time = await readData("pre_time.bin");
+        const today = time['year'].toString() +  "-" + time['month'].toString() + "-" + time['day'].toString();
+        document.getElementById("today").textContent = today;
+    }
+    gui();
+
+    const inputElem  = document.getElementById("input");
+    inputElem.oninput = function() {
+        inputElem.className = "";
+    };
+    const guessesElem = document.getElementById("guesses");
+    
+    function guess() {
+        const previousGuesses = new Set(Array.from(guessesElem.querySelectorAll(".article")).map(x => x.textContent));
+
+        let guessName = inputElem.value;
+        if (!(data.filtered.includes(guessName)) || previousGuesses.has(guessName)) {
+            inputElem.classList.add("invalid");
+            return;
+        }
+        inputElem.className = "";
+        inputElem.value = "";
+
+        let guessElem = createGuessElem(guessName);
+        guessesElem.prepend(guessElem);
+
+        setTimeout(() => {
+            let guess_info = data.data[guessName];
+            let guess_distance = guess_info[0];
+            let guess_common_links = guess_info[1];
+            let guess_occurs = guess_info[2];
+
+            if (guess_distance == 0) {
+                stopTimer();
+            }
+
+            updateGuessElem(guessElem, {
+                distance: guess_distance,
+                commonlinks: guess_common_links,
+                occurs: guess_occurs
+            });
+
+            saveGuessData();
+            showDialog();
+        }, 50);
+    }
+
+    function saveGuessData() {
+        let guesses = [];
+        for (let guessElem of guessesElem.children) {
+            let article = guessElem.querySelector(".article").textContent;
+            let distance = guessElem.querySelector(".distance").textContent;
+            let occurs = guessElem.querySelector(".occurs").textContent;
+            let commonlinks = guessElem.querySelector(".commonlinks").textContent;
+            guesses.push({
+                article, distance, occurs, commonlinks
+            });
+        }
+        localStorage.setItem("guesses-" + today, JSON.stringify(guesses));
+    }
+
+    function loadGuessData() {
+        let guesses = [];
+        try {
+            guesses = JSON.parse(localStorage.getItem("guesses-" + today)) || [];
+        } catch(err) { 
+            console.warn("no previous guess data");
+        }
+
+        for (let guess of guesses) {
+            if (guess.distance == 0) {
+                stopTimer();
+            }
+
+            let guessElem = createGuessElem(guess.article);
+            updateGuessElem(guessElem, guess);
+            guessesElem.append(guessElem);
+        }
+    }
+
+    function createGuessElem(article) {
+        let guessElem = document.createElement("div");
+        guessElem.className = "guess";
+
+        let articleElem = document.createElement("div");
+        articleElem.textContent = article;
+        articleElem.className = "article";
+
+        let distanceElem = document.createElement("div");
+        distanceElem.className = "distance";
+
+        let commonLinksElem = document.createElement("div");
+        commonLinksElem.className = "commonlinks";
+
+        let occursElem = document.createElement("div");
+        occursElem.className = "occurs";
+
+        guessElem.appendChild(articleElem);
+        guessElem.appendChild(distanceElem);
+        guessElem.appendChild(commonLinksElem);
+        guessElem.appendChild(occursElem);
+        return guessElem;
+    }
+
+    function updateGuessElem(guessElem, data) {
+        let distanceElem = guessElem.querySelector(".distance"),
+            commonLinksElem = guessElem.querySelector(".commonlinks"),
+            occursElem = guessElem.querySelector(".occurs");
+
+        distanceElem.textContent = data.distance;
+        commonLinksElem.textContent = data.commonlinks;
+        occursElem.textContent = data.occurs;
+
+        if (data.distance == 0) {
+            distanceElem.classList.add("blue");
+            commonLinksElem.classList.add("blue");
+            occursElem.classList.add("blue");
+            guessElem.classList.add("blue");
+            return;
+        }
+
+        distanceElem.classList.add(
+            data.distance <= 1 ? "green" : 
+            data.distance <= 1.5 ? "lime" :
+            data.distance <= 2 ? "yellow" : 
+            data.distance <= 2.5 ? "amber" : 
+            data.distance <= 3 ? "orange" : "red");
+        commonLinksElem.classList.add(
+            data.commonlinks >= 48 ? "green" : 
+            data.commonlinks >= 32 ? "lime" :
+            data.commonlinks >= 16 ? "yellow" : 
+            data.commonlinks >= 6 ? "amber" :
+            data.commonlinks >= 1 ? "orange" : "red");
+        occursElem.classList.add(
+            data.occurs >= 10 ? "green" : 
+            data.occurs >= 7 ? "lime" :
+            data.occurs >= 4 ? "yellow" : 
+            data.occurs >= 2 ? "amber" :
+            data.occurs >= 1 ? "orange" : "red");
+    }
+
+    // Irrelevant functions to preprocessing
+    // is Hidden
+    let isHidden = false;
+    window.addEventListener("blur", function() {
+        isHidden = true;
+    });
+    window.addEventListener("focus", function() {
+        isHidden = false;
+    });
+
+    // Timer
+    let timer = 0;
+    let timerInterval = -1;
+    function formatTimer(timer) {
+        let secs = timer % 60;
+        let mins = Math.floor(timer / 60);
+
+        return mins + ":" + String(secs).padStart(2, "0");
+    }
+    function loadTimer() {
+        timer = localStorage.getItem("timer-" + today) | 0;
+        document.getElementById("timer").textContent = formatTimer(timer);
+
+        if (timer >= 60 * 15) {
+            return;
+        }
+        timerInterval = setInterval(function() {
+            if (isHidden) {
+                return;
+            }
+
+            timer += 1;
+            document.getElementById("timer").textContent = formatTimer(timer);
+            localStorage.setItem("timer-" + today, timer);
+
+            if (timer >= 60 * 15) {
+                stopTimer();
+                showDialog();
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    let hasShownDialog = false;
+    function showDialog() {
+        if (hasShownDialog) return;
+        document.getElementById("popup-copied").style.opacity = "0";
+        let wordElem = document.getElementById("popup-word");
+        if (timer >= 60 * 15) {
+            document.getElementById("popup-status").style.color = "#a41e32";
+            document.getElementById("popup-status").textContent = "ran out of time";
+            document.getElementById("popup").querySelector("h2").textContent = "womp womp";
+        } else if (guessesElem.querySelector(".guess .blue") ) {
+            document.getElementById("popup-status").style.color = "#226622";
+            document.getElementById("popup-status").textContent = "win";
+            document.getElementById("popup").querySelector("h2").textContent = "congratulations";
+        } else {
+            return;
+        }
+
+        let word = filteredArticles[random(today, filteredArticles.length)];
+        wordElem.textContent = word;
+        wordElem.href = "https://ncatlab.org/nlab/show/" + word.replace(/\s+/g, "+");
+
+        document.getElementById("popup").showModal();
+        hasShownDialog = true;
+    }
+    
+    function closePopup() {
+        document.getElementById("popup").close();
+    }
+
+    function shareColor(elem) {
+        return elem.classList.contains("red") ? "🟥" :
+            elem.classList.contains("orange") ? "🟫" :
+            elem.classList.contains("amber") ? "🟧" :
+            elem.classList.contains("yellow") ? "🟨" :
+            elem.classList.contains("lime") || elem.classList.contains("green") ? "🟩" :
+            elem.classList.contains("blue") ? "🟦" : "⬛";
+    }
+
+    async function share() {
+        let parts = today.split("-").slice(1);
+        let text = "nLabordle " + Number(parts[0]) + "/" + parts[1].padStart(2, "0") + "\n" + guessesElem.children.length + " guesses | " + formatTimer(timer) + (guessesElem.querySelector(".guess .blue") ? "" : " | failed") + "\n";
+        for (let guessElem of guessesElem.children) {
+            text += "\n" + [shareColor(guessElem.querySelector(".distance")),
+                shareColor(guessElem.querySelector(".commonlinks")),
+                shareColor(guessElem.querySelector(".occurs"))].join("");
+        }
+        await navigator.clipboard.writeText(text);
+        document.getElementById("popup-copied").style.opacity = "1";
+    }
+</script>
