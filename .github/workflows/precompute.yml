@@ -34,7 +34,10 @@ jobs:
           
           # Checkout gh-pages branch
           git fetch origin gh-pages
-          git checkout gh-pages
+          git checkout gh-pages || git checkout --orphan gh-pages
+
+          # Copy precomputed results to the root directory
+          cp -r ./* ./
 
           # Commit and push the changes
           git add .
@@ -49,4 +52,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./your_publish_dir  # The directory with static files to be served by GitHub Pages
+          publish_dir: ./  # The directory with static files to be served by GitHub Pages
