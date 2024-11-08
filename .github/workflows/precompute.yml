@@ -25,7 +25,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Precompute Script
-        run: python precompute.py  # Replace with your precompute script
+        run: |
+          python precompute.py
+          ls -alh
 
       - name: Commit and push precomputed results to gh-pages
         run: |
@@ -33,7 +35,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Checkout gh-pages branch
-          git fetch origin gh-pages
+          git fetch --all
           git checkout gh-pages || git checkout --orphan gh-pages
 
           # Copy precomputed results to the root directory
@@ -52,4 +54,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./  # The directory with static files to be served by GitHub Pages
+          publish_dir: ./
