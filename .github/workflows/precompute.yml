@@ -29,23 +29,6 @@ jobs:
           python precompute.py
           ls -alh
 
-      - name: Commit and push precomputed results to gh-pages
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Checkout gh-pages branch
-          git fetch --all
-          git checkout gh-pages || git checkout --orphan gh-pages
-
-          # Copy precomputed results to the root directory
-          cp -r ./* ./
-
-          # Commit and push the changes
-          git add .
-          git commit -m "Update precomputed results"
-          git push origin gh-pages
-
   deploy:
     needs: precompute
     runs-on: ubuntu-latest
