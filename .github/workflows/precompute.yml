@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Precompute Script
-        run: python your_precompute_script.py  # Replace with your precompute script
+        run: python precompute.py  # Replace with your precompute script
 
       - name: Commit and push precomputed results to gh-pages
         run: |
@@ -35,9 +35,6 @@ jobs:
           # Checkout gh-pages branch
           git fetch origin gh-pages
           git checkout gh-pages
-
-          # Copy precomputed files to gh-pages branch
-          cp -r path_to_precomputed_files/* ./  # Adjust this to the location of your generated files
 
           # Commit and push the changes
           git add .
