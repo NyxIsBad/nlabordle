@@ -171,10 +171,11 @@
     }
     let data;
     async function main() {
-        data = await readData("data.bin");
+        data = await readData("pre_data.bin");
 
         let filteredArticles = data.filtered;
         let difficulty = data.difficulty;
+        let links = data.links;
         
         document.getElementById("difficulty").textContent = difficulty + " [" + links + "]";
 
@@ -196,7 +197,7 @@
 
     // GUI
     async function gui() {
-        let time = await readData("time.bin");
+        let time = await readData("pre_time.bin");
         const today = time['year'].toString() +  "-" + time['month'].toString() + "-" + time['day'].toString();
         document.getElementById("today").textContent = today;
     }
@@ -212,11 +213,12 @@
         const previousGuesses = new Set(Array.from(guessesElem.querySelectorAll(".article")).map(x => x.textContent));
 
         let guessName = inputElem.value;
-        if (!(guessName in data.filtered) || previousGuesses.has(guessName)) {
+        if (!(data.filtered.includes(guessName)) || previousGuesses.has(guessName)) {
             inputElem.classList.add("invalid");
             return;
         }
         inputElem.className = "";
+        inputElem.value = "";
 
         let guessElem = createGuessElem(guessName);
         guessesElem.prepend(guessElem);

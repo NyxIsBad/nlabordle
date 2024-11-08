@@ -1,7 +1,7 @@
 import json
 import zlib
 import time
-from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 from typing import *
 
 # data is global in the .js
@@ -90,7 +90,7 @@ def load_data():
     decompressed_data = zlib.decompress(compressed_data)
     data: dict = json.loads(decompressed_data.decode('utf-8'))
 
-    for article in tqdm(data.keys(), desc="Processing articles"):
+    for article in data.keys():
         entry: dict = data[article]
         links = entry.get('links')
         if links is None:
@@ -114,7 +114,7 @@ def load_data():
     else:
         difficulty = 'impossible'
 
-    return data, filtered_articles, difficulty, target, y, m, d
+    return data, filtered_articles, difficulty, target, links, y, m, d
 
 def precompute(raw_data: dict, filtered: list[str], target: str):
     # Essentially we want to precompute the common links and the distance between every pair of articles
@@ -125,41 +125,48 @@ def precompute(raw_data: dict, filtered: list[str], target: str):
     data = {}
     # Dict contains a tuple of (avg_distance,, commonlinks, occurrences)
     data[start] = (0, 0, 0)
-    for article in tqdm(filtered, desc="Precomputing"):
-        if article == start:
-            continue
-        article_link = resolveLink(raw_data, article)
-        # We compute the distance from start to article and article to start
-        dists = [x for x in [computeDistance(raw_data, start, article_link), computeDistance(raw_data, article_link, start)] if x is not None]
-        avg_distance = "∞" if len(dists) == 0 else sum(dists) / len(dists)
 
-        # Occurrences 
-        occurrences = raw_data[target].get('content', '').count(article_link)
-        data[article] = (
-            avg_distance,
-            computeCommonLinks(raw_data, start, article),
-            occurrences
-        )
+    def helper(article):
+        dists = [x for x in [computeDistance(raw_data, start, article), computeDistance(raw_data, article, start)] if x is not None]
+        avg_distance = "∞" if len(dists) == 0 else sum(dists) / len(dists)
+        occurrences = raw_data[target].get('content', '').count(article)
+        common_links = computeCommonLinks(raw_data, start, article)
+        return (avg_distance, common_links, occurrences), article
+
+    print("Precomputing data...")
+    from tqdm import tqdm
+    with ThreadPoolExecutor(max_workers = 8) as executor:
+        futures = []
+        for article in tqdm(filtered):
+            if article == start:
+                continue
+            article_link = resolveLink(raw_data, article)
+            # We compute the distance from start to article and article to start
+            futures.append(executor.submit(helper, article_link))
+        for future in tqdm(futures, total=len(futures)):
+            ans, article = future.result()
+            data[article] = ans
     return data
 
 # calculate runtime
 start = time.time()
-raw_data, filtered, difficulty, target, y, m, d = load_data()
+raw_data, filtered, difficulty, target, links, y, m, d = load_data()
 computed_data = precompute(raw_data, filtered, target)
 article_data = {
     'difficulty': difficulty,
     'target': target,
     'data': computed_data,
-    'filtered': filtered
+    'filtered': filtered,
+    'links': links
 }
 time_data = {
     'year': y,
     'month': m,
     'day': d
 }
-with open("data.bin", 'wb') as file:
+with open("pre_data.bin", 'wb') as file:
     file.write(zlib.compress(json.dumps(article_data).encode('utf-8')))
-with open("time.bin", 'wb') as file:
+with open("pre_time.bin", 'wb') as file:
     file.write(zlib.compress(json.dumps(time_data).encode('utf-8')))
 end = time.time()
 print(f"Time taken: {end - start} seconds")
