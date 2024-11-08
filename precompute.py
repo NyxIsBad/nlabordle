@@ -164,9 +164,9 @@ time_data = {
     'month': m,
     'day': d
 }
-with open("pre_data.bin", 'wb') as file:
+with open("./public/pre_data.bin", 'wb') as file:
     file.write(zlib.compress(json.dumps(article_data).encode('utf-8')))
-with open("pre_time.bin", 'wb') as file:
+with open("./public/pre_time.bin", 'wb') as file:
     file.write(zlib.compress(json.dumps(time_data).encode('utf-8')))
 end = time.time()
 print(f"Time taken: {end - start} seconds")
