@@ -1,0 +1,55 @@
+name: Precompute and Deploy
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to main branch
+  schedule:
+    - cron: '0 0 * * *'  # Runs every 24 hours
+
+jobs:
+  precompute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Precompute Script
+        run: python your_precompute_script.py  # Replace with your precompute script
+
+      - name: Commit and push precomputed results to gh-pages
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Checkout gh-pages branch
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+          # Copy precomputed files to gh-pages branch
+          cp -r path_to_precomputed_files/* ./  # Adjust this to the location of your generated files
+
+          # Commit and push the changes
+          git add .
+          git commit -m "Update precomputed results"
+          git push origin gh-pages
+
+  deploy:
+    needs: precompute
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./your_publish_dir  # The directory with static files to be served by GitHub Pages
