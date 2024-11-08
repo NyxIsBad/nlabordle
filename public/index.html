@@ -1,11 +1,16 @@
 <style> 
-    body {
-        font-family: serif;
-    }
     main { 
         width: 512px;
         margin: auto;
         display: none;
+        flex-grow: 1;
+    }
+    body, html {
+        font-family: serif;
+        height: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
     }
     #guesses { 
         margin-top: 8px;
@@ -125,6 +130,17 @@
         padding: 4px 8px;
         cursor: pointer;
     }
+
+    footer {
+        text-align: center;
+        padding: 10px 0;
+        font-size: 14px;
+        z-index: 10;
+    }
+    .description {
+        margin-top: 20px;
+    }
+
 </style>
 
 <meta charset="utf8">
@@ -151,7 +167,7 @@
 </datalist>
 
 <dialog id="popup">    
-    <a class="close" onclick="closePopup()">&times;</a>
+    <a class="close" onclick="closePopup()" style="width: 20px;height: 20px;">&times;</a>
     <h2>-</h2>
     <p>you <span id="popup-status">-</span>! the word was: <a target="_blank" id="popup-word"></a></p>
     <img src="happynlab.svg">
@@ -159,6 +175,17 @@
     <div id="popup-copied">results copied to clipboard</div>
 </dialog>
 
+<footer class="description">
+    <p>Guess the Wikipedia article in the fewest tries (you have 15 minutes)!
+        <br>First Value: Average length of target → guess and guess → target shortest paths 
+        <br>Second Value: Number of common links between the target article and the guess
+        <br>Third Value: Number of times the guess shows up on the page of the target article
+    </p>
+</footer>
+
+<footer class="footer">
+    <p><a href="https://github.com/Allen-B1/nlabordle" target="_blank">GitHub</a></p>
+</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" integrity="sha512-g2TeAWw5GPnX7z0Kn8nFbYfeHcvAu/tx6d6mrLe/90mkCxO+RcptyYpksUz35EO337F83bZwcmUyHiHamspkfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
@@ -401,7 +428,7 @@
             return;
         }
 
-        let word = filteredArticles[random(today, filteredArticles.length)];
+        let word = data.target;
         wordElem.textContent = word;
         wordElem.href = "https://ncatlab.org/nlab/show/" + word.replace(/\s+/g, "+");
 

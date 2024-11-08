@@ -137,7 +137,7 @@ def precompute(raw_data: dict, filtered: list[str], target: str):
     from tqdm import tqdm
     with ThreadPoolExecutor(max_workers = 8) as executor:
         futures = []
-        for article in tqdm(filtered[:10]):
+        for article in tqdm(filtered):
             if article == start:
                 continue
             article_link = resolveLink(raw_data, article)
